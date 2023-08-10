@@ -20,10 +20,10 @@ class MyKafkaDeserializationSchema(groupId:String) extends KafkaDeserializationS
     val offset: Long = consumerRecord.offset()
     //将topic和offset添加到json中
     val jsonObject: JSONObject = JSON.parseObject(new String(consumerRecord.value()))
-    jsonObject.put("topic",topic)
-    jsonObject.put("offset",offset)
-    jsonObject.put("partition",partition)
-    jsonObject.put("groupId",groupId)
+    jsonObject.put("topicName",topic)
+    jsonObject.put("topicOffset",offset)
+    jsonObject.put("topicPartition",partition)
+    jsonObject.put("topicGroupId",groupId)
     jsonObject.toJSONString
   }
 

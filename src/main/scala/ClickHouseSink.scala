@@ -26,7 +26,6 @@ class ClickHouseSink(properties: ParameterTool) extends RichSinkFunction[String]
   override def invoke(sql: String, context: Context): Unit = {
     retryOnFailure(maxRetries) {
       val statement = connection.createStatement()
-      println(sql)
       statement.executeUpdate(sql)
     }
   }
