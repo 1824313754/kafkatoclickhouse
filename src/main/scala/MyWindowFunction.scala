@@ -1,10 +1,8 @@
 import com.alibaba.fastjson.JSON
-import org.apache.flink.api.common.functions.IterationRuntimeContext
-import org.apache.flink.api.java.tuple.Tuple
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.streaming.api.functions.windowing.{ProcessAllWindowFunction, ProcessWindowFunction}
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow
+import org.apache.flink.streaming.api.functions.windowing.{ProcessWindowFunction}
+import org.apache.flink.streaming.api.windowing.windows.{GlobalWindow}
 import org.apache.flink.util.Collector
 import ru.yandex.clickhouse.{BalancedClickhouseDataSource, ClickHouseConnection, ClickHouseUtil}
 import ru.yandex.clickhouse.settings.ClickHouseProperties
@@ -16,11 +14,11 @@ import java.lang
  * 批量生成insert into语句
  * @param properties
  */
-class MyWindowFunction(properties: ParameterTool) extends ProcessWindowFunction[String,String,String,TimeWindow] {
+class MyWindowFunction(properties: ParameterTool) extends ProcessWindowFunction[String,String,String,GlobalWindow ] {
   private var connection: ClickHouseConnection = _
   private val database: String = properties.get("clickhouse.database")
   private val tableName: String = properties.get("clickhouse.table")
-  val batchSizeLimit = properties.getInt("clickhouse.batchSizeLimit", 1)*1024*1024
+
   // 获取表的字段类型
   private var map: Map[String, String] = _
   //保留引号的类型
@@ -31,17 +29,16 @@ class MyWindowFunction(properties: ParameterTool) extends ProcessWindowFunction[
     map = getCoumnName()
   }
 
-  override def process(key: String, context: ProcessWindowFunction[String, String, String, TimeWindow]#Context, elements: lang.Iterable[String], out: Collector[String]): Unit = {
+  override def process(key: String, context: ProcessWindowFunction[String, String, String, GlobalWindow]#Context, elements: lang.Iterable[String], out: Collector[String]): Unit = {
     val batchSql = new StringBuilder(s"insert into $database.$tableName (")
     val batchValues = new StringBuilder("values ")
-    //当前批次消息大小
-    var currentBatchSize = 0
-    //获取窗口内的数据迭代器
     val elementsIterator = elements.iterator()
     while (elementsIterator.hasNext) {
+      //      println(elementsIterator.hasNext)
       val essInfo = elementsIterator.next()
       val essInfoJson = JSON.parseObject(essInfo)
       essInfoJson.put("dayOfYear", essInfoJson.getString("cTime").substring(0, 10))
+      //当前时间转为yyyy-MM-dd HH:mm:ss
       essInfoJson.put("sTime", getTimeStr)
       val values = new StringBuilder("(")
       for ((key, clickHouseType) <- map) {
@@ -50,41 +47,13 @@ class MyWindowFunction(properties: ParameterTool) extends ProcessWindowFunction[
       }
       values.deleteCharAt(values.length - 1)
       values.append("),")
-      val valuesLength = values.length
-      //获取当前批次数据的大小
-      val newBatchSize = currentBatchSize + valuesLength
-      //如果当前批次数据大小小于限制大小，则继续添加
-      if (newBatchSize <= batchSizeLimit) {
-        batchValues.append(values)
-        currentBatchSize = newBatchSize
-      } else {
-        // 发送批次
-        sendBatch(batchSql, batchValues, out)
-        // 重置批次
-        batchValues.clear()
-        batchValues.append("values ").append(values)
-        currentBatchSize = valuesLength
-      }
+      batchValues.append(values)
     }
-
-    // 若最后一批数据大小仍然小于限制大小，则直接发送
-    if (batchValues.length() > "values ".length()) {
-      sendBatch(batchSql, batchValues, out)
-    }
-  }
-
-  private def sendBatch(batchSql: StringBuilder, batchValues: StringBuilder, out: Collector[String]): Unit = {
     batchValues.deleteCharAt(batchValues.length - 1)
     batchSql.append(map.keys.mkString(",")).append(") ")
     batchSql.append(batchValues)
-//    println(batchSql.size/1024)
     out.collect(batchSql.toString())
-    batchSql.clear()
-    batchSql.append(s"insert into $database.$tableName (")
-    batchValues.clear()
-    batchValues.append("values ")
   }
-
 
   override def close(): Unit = {
     connection.close()

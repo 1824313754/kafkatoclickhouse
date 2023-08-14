@@ -4,8 +4,7 @@ import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{CheckpointConfig, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows
-import org.apache.flink.streaming.api.windowing.time.Time
+
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer
 import sink.ClickHouseSink
 import utils.GetConfig
@@ -51,11 +50,11 @@ object KafakToClickhouse {
     )
     val dataStream: DataStream[String] = env.addSource(kafkaConsumer).uid("kafkaSource").name("kafkaSource")
     // 添加窗口函数逻辑
-    val windowSize = Time.seconds(properties.getInt("window.size", 2))
+    val windowSize = properties.getInt("window.size", 20)
     val outputStream: DataStream[String] = dataStream
       .keyBy(JSON.parseObject(_).getString("essCode"))
-      .window(TumblingProcessingTimeWindows.of(windowSize))
-      .process(new MyWindowFunction(properties))
+      .countWindow(windowSize)
+      .process(new MyWindowFunction(properties)).uid("windowFunction").name("windowFunction")
     outputStream.addSink(new ClickHouseSink(properties)).uid("clickhouseSink").name("clickhouseSink")
     env.execute("KaflaToClickhouse")
   }
