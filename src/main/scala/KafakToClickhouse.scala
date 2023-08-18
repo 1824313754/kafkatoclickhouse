@@ -2,9 +2,9 @@ import com.alibaba.fastjson.JSON
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
+import org.apache.flink.runtime.state.filesystem.FsStateBackend
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{CheckpointConfig, StreamExecutionEnvironment}
-
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer
 import sink.ClickHouseSink
 import utils.GetConfig
@@ -32,7 +32,7 @@ object KafakToClickhouse {
         //设置checkpoint超时时间
         env.getCheckpointConfig.setCheckpointTimeout(properties.getLong("checkpoint.timeout"))
         //设置RocksDBStateBackend,增量快照
-        env.setStateBackend(new RocksDBStateBackend(properties.get("checkpoint.path"), true))
+        env.setStateBackend(new FsStateBackend(properties.get("checkpoint.path"), true))
         //设置任务取消时保留checkpoint
         env.getCheckpointConfig.enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION)
     }
