@@ -58,7 +58,7 @@ class ClickHouseSink(properties: ParameterTool) extends RichSinkFunction[String]
           retries += 1
           if (retries < maxRetries) {
             println(s"Operation failed, retrying ($retries/$maxRetries). ${e.getMessage}")
-            connect() //重连
+//            connect() //重连
           } else {
             println(s"Max retries exceeded. Failed to perform the operation.")
             e.printStackTrace()

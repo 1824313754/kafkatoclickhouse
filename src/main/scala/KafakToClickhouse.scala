@@ -43,12 +43,16 @@ object KafakToClickhouse {
     //消费者组id
     val groupId = properties.get("kafka.consumer.groupid")
     val topicList: java.util.List[String] = topicString.split(",").toBuffer.asJava
+    //获取要检测的必要字段
+    val checkField: Array[String] = properties.get("check.field").split(",")
     val kafkaConsumer: FlinkKafkaConsumer[String] = new FlinkKafkaConsumer(
       topicList,
-      new MyKafkaDeserializationSchema(groupId),
+      new MyKafkaDeserializationSchema(groupId,checkField),
       createConsumerProperties(properties)
     )
     val dataStream: DataStream[String] = env.addSource(kafkaConsumer).uid("kafkaSource").name("kafkaSource")
+      .filter(_ != null).uid("filter").name("filter")
+
     // 添加窗口函数逻辑
     val windowSize = properties.getInt("window.size", 20)
     val outputStream: DataStream[String] = dataStream
