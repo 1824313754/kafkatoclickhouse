@@ -1,7 +1,6 @@
 import com.alibaba.fastjson.JSON
 import org.apache.flink.api.common.restartstrategy.RestartStrategies
 import org.apache.flink.api.java.utils.ParameterTool
-import org.apache.flink.contrib.streaming.state.RocksDBStateBackend
 import org.apache.flink.runtime.state.filesystem.FsStateBackend
 import org.apache.flink.streaming.api.datastream.DataStream
 import org.apache.flink.streaming.api.environment.{CheckpointConfig, StreamExecutionEnvironment}
@@ -38,25 +37,23 @@ object KafakToClickhouse {
     }
     //注册为全局变量
     env.getConfig.setGlobalJobParameters(properties)
-
+    //注册分布式缓存
+    env.registerCachedFile(properties.get("kafkatock.path"), "kafkatock")
     val topicString = properties.get("kafka.topic")
     //消费者组id
     val groupId = properties.get("kafka.consumer.groupid")
     val topicList: java.util.List[String] = topicString.split(",").toBuffer.asJava
-    //获取要检测的必要字段
-    val checkField: Array[String] = properties.get("check.field").split(",")
     val kafkaConsumer: FlinkKafkaConsumer[String] = new FlinkKafkaConsumer(
       topicList,
-      new MyKafkaDeserializationSchema(groupId,checkField),
+      new MyKafkaDeserializationSchema(groupId),
       createConsumerProperties(properties)
     )
     val dataStream: DataStream[String] = env.addSource(kafkaConsumer).uid("kafkaSource").name("kafkaSource")
-      .filter(_ != null).uid("filter").name("filter")
 
     // 添加窗口函数逻辑
-    val windowSize = properties.getInt("window.size", 20)
+    val windowSize = properties.getInt("window.size", 5)
     val outputStream: DataStream[String] = dataStream
-      .keyBy(JSON.parseObject(_).getString("essCode"))
+      .keyBy(JSON.parseObject(_).getString("topicName"))
       .countWindow(windowSize)
       .process(new MyWindowFunction(properties)).uid("windowFunction").name("windowFunction")
     outputStream.addSink(new ClickHouseSink(properties)).uid("clickhouseSink").name("clickhouseSink")

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="root@112.122.189.90:10000" type="ssh/sftp" uuid="420a5b5e-a4bd-49e4-9819-c16725da7a7e">
+        <config>
+          <option name="projectRootOnTarget" value="/data06/test" />
+          <option name="serverName" value="root@112.122.189.90:10000 password" />
+        </config>
+        <ContributedStateBase type="JavaLanguageRuntime">
+          <config>
+            <option name="javaVersionString" value="1.8.0_362" />
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>
