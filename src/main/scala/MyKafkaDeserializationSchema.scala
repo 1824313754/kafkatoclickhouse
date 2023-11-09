@@ -24,13 +24,14 @@ class MyKafkaDeserializationSchema(groupId:String) extends KafkaDeserializationS
     jsonObject.put("topicOffset",offset)
     jsonObject.put("topicPartition",partition)
     jsonObject.put("topicGroupId",groupId)
+    //取cTime,截取前10位
+    val cTime: String = jsonObject.getString("cTime")
+    jsonObject.put("dayOfYear",cTime.substring(0, 10))
     jsonObject.toJSONString
   }
 
   override def getProducedType: TypeInformation[String] = {
     TypeInformation.of(classOf[String])
   }
-
-
 
 }

@@ -6,6 +6,7 @@ import ru.yandex.clickhouse.settings.ClickHouseProperties
 import ru.yandex.clickhouse.{BalancedClickhouseDataSource, ClickHouseConnection, ClickHouseUtil}
 
 import java.sql.ResultSet
+import scala.collection.JavaConversions.`deprecated iterableAsScalaIterable`
 
 /**
  * @Author WangJie
@@ -96,7 +97,7 @@ class ClickouseUtils(properties: ParameterTool) extends Serializable{
   def formatInsertSql(jsonList:java.lang.Iterable[String], tableName: String, columnMap: Map[String, String]): String = {
     val batchSql = new StringBuilder(s"insert into $database.$tableName (")
     val batchValues = new StringBuilder("values")
-    jsonList.forEach { json =>
+    jsonList.foreach { json: String =>
       val values = new StringBuilder("(")
       val jsonMap = JSON.parseObject(json)
       for ((key, clickHouseType) <- columnMap) {
@@ -107,6 +108,7 @@ class ClickouseUtils(properties: ParameterTool) extends Serializable{
       values.append("),")
       batchValues.append(values)
     }
+
 
     batchValues.deleteCharAt(batchValues.length - 1)
     batchSql.append(columnMap.keys.mkString(",")).append(") ")

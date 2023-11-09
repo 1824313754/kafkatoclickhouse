@@ -1,2 +1,8 @@
 pcsInfo,pcsInfo
 summaryInfo,summaryInfo
+bmsInfo,bmsInfo
+chargerInfo,chargerInfo
+airconInfo,airconInfo
+THSensorInfo,THSensorInfo
+leakageInfo,leakageInfo
+IOInfo,IOInfo
